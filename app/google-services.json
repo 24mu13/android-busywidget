@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "40268573778",
+    "firebase_url": "https://busywidget.firebaseio.com",
+    "project_id": "busywidget",
+    "storage_bucket": "busywidget.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:40268573778:android:6d92eb9a8206c732",
+        "android_client_info": {
+          "package_name": "net.ddns.woodhouse.busywidget"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "40268573778-olk8aernbon1chtaek4dggmur735pule.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCToHi_58N_pDyPJQ14QvUVo9flEBMOjl4"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
