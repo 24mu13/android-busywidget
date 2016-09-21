@@ -1,8 +1,10 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#09C"
-    android:padding="@dimen/widget_margin">
+    android:padding="@dimen/widget_margin"
+    android:backgroundTint="@android:color/transparent">
 
     <ImageButton
         android:layout_width="wrap_content"
@@ -10,5 +12,6 @@
         android:id="@+id/buttonIsBusy"
         android:layout_centerVertical="true"
         android:layout_centerHorizontal="true"
-        android:src="@drawable/button_selector" />
+        android:src="@drawable/button_selector"
+        android:background="@android:color/transparent" />
 </RelativeLayout>
