@@ -12,6 +12,6 @@
         android:id="@+id/buttonIsBusy"
         android:layout_centerVertical="true"
         android:layout_centerHorizontal="true"
-        android:src="@drawable/button_selector"
+        android:src="@drawable/button_blank_green_01"
         android:background="@android:color/transparent" />
 </RelativeLayout>
