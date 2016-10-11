@@ -57,9 +57,9 @@ public class BusyWidgetConfigureActivity extends Activity {
     // If there is no preference saved, get the default from a resource
     static String loadRoomId(Context context, int appWidgetId) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, 0);
-        String titleValue = prefs.getString(PREF_PREFIX_KEY + appWidgetId, null);
-        if (titleValue != null) {
-            return titleValue;
+        String roomId = prefs.getString(PREF_PREFIX_KEY + appWidgetId, null);
+        if (roomId != null) {
+            return roomId;
         } else {
             return UUID.randomUUID().toString();
         }
