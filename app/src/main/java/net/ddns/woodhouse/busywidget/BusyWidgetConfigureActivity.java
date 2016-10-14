@@ -6,9 +6,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.SparseArray;
 import android.view.View;
 import android.widget.EditText;
-
+import com.google.firebase.database.DatabaseReference;
 import java.util.UUID;
 
 /**
@@ -19,6 +20,7 @@ public class BusyWidgetConfigureActivity extends Activity {
     private static final String PREFS_NAME = "net.ddns.woodhouse.busywidget.BusyWidgetProvider";
     private static final String PREF_PREFIX_KEY = "bw_room_";
 
+    private static SparseArray<DatabaseReference> references = new SparseArray<>();
     int mAppWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
     EditText mAppWidgetText;
 
@@ -32,7 +34,7 @@ public class BusyWidgetConfigureActivity extends Activity {
 
             // It is the responsibility of the configuration activity to update the app widget
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-            BusyWidgetProvider.updateWidget(context, appWidgetManager, mAppWidgetId);
+            BusyWidgetProvider.createWidget(context, appWidgetManager, mAppWidgetId);
 
             // Make sure we pass back the original appWidgetId
             Intent resultValue = new Intent();
@@ -44,6 +46,23 @@ public class BusyWidgetConfigureActivity extends Activity {
 
     public BusyWidgetConfigureActivity() {
         super();
+    }
+
+    static int getWidgetIdFromRoomId(String roomId) {
+        int result = AppWidgetManager.INVALID_APPWIDGET_ID;
+        for(int i = 0; i < references.size(); i++) {
+            int key = references.keyAt(i);
+            DatabaseReference ref = references.get(key);
+            if (ref.getKey().equals(roomId)) {
+                result = key;
+                break;
+            }
+        }
+        return result;
+    }
+
+    static SparseArray<DatabaseReference> getReferences() {
+        return references;
     }
 
     // Write the prefix to the SharedPreferences object for this widget

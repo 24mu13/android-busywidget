@@ -6,7 +6,6 @@ import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
-import android.util.SparseArray;
 import android.widget.RemoteViews;
 
 import com.google.firebase.database.DataSnapshot;
@@ -25,19 +24,38 @@ public class BusyWidgetProvider extends AppWidgetProvider {
     private static final String ACTION_CLICK = "net.ddns.woodhouse.busywidget.APPWIDGET_CLICK";
 
     private static FirebaseDatabase database;
-    private static SparseArray<DatabaseReference> references;
 
-    private static int getWidgetIdFromRoomId(SparseArray<DatabaseReference> references, String roomId) {
-        int result = AppWidgetManager.INVALID_APPWIDGET_ID;
-        for(int i = 0; i < references.size(); i++) {
-            int key = references.keyAt(i);
-            DatabaseReference ref = references.get(key);
-            if (ref.getKey().equals(roomId)) {
-                result = key;
-                break;
+    protected static void createWidget(Context context, AppWidgetManager manager, int widgetId) {
+        updateWidget(context, manager, widgetId);
+
+        // set the listener for db changing
+        String roomId = BusyWidgetConfigureActivity.loadRoomId(context, widgetId);
+        DatabaseReference ref = database.getReference(roomId);
+        ref.addValueEventListener(new ValueEventListenerWithContext(context) {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                String roomId = dataSnapshot.getRef().getKey();
+                int widgetId = BusyWidgetConfigureActivity.getWidgetIdFromRoomId(roomId);
+                if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID)
+                    if (dataSnapshot.exists()) {
+                        AppWidgetManager manager = AppWidgetManager.getInstance(context);
+                        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.busy_widget);
+                        views.setImageViewResource(R.id.buttonIsBusy, dataSnapshot.getValue(Boolean.class) ?
+                                R.drawable.button_blank_red_01 : R.drawable.button_blank_green_01);
+                        views.setOnClickPendingIntent(R.id.buttonIsBusy, getPendingSelfIntent(
+                                context, ACTION_CLICK, widgetId));
+                        manager.updateAppWidget(widgetId, views);
+                    }
+                    else
+                        BusyWidgetConfigureActivity.getReferences().get(widgetId).setValue(false);
             }
-        }
-        return result;
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.w(TAG, "Listening for change in room cancelled!", databaseError.toException());
+            }
+        });
+        BusyWidgetConfigureActivity.getReferences().put(widgetId, ref);
+
     }
 
     protected static void updateWidget(Context context, AppWidgetManager manager, int widgetId) {
@@ -58,32 +76,6 @@ public class BusyWidgetProvider extends AppWidgetProvider {
         // actually updates the view
         manager.updateAppWidget(widgetId, views);
 
-        // set the listener for db changing
-        references.put(widgetId, database.getReference(roomId));
-        references.get(widgetId).addValueEventListener(new ValueEventListenerWithContext(context) {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                String roomId = dataSnapshot.getRef().getKey();
-                int widgetId = getWidgetIdFromRoomId(references, roomId);
-                if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID)
-                    if (dataSnapshot.exists()) {
-                        AppWidgetManager manager = AppWidgetManager.getInstance(context);
-                        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.busy_widget);
-                        views.setImageViewResource(R.id.buttonIsBusy, dataSnapshot.getValue(Boolean.class) ?
-                                R.drawable.button_blank_red_01 : R.drawable.button_blank_green_01);
-                        views.setOnClickPendingIntent(R.id.buttonIsBusy, getPendingSelfIntent(
-                                context, ACTION_CLICK, widgetId));
-                        manager.updateAppWidget(widgetId, views);
-                    }
-                    else
-                        references.get(widgetId).setValue(false);
-            }
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Log.w(TAG, "Listening for change in room cancelled!", databaseError.toException());
-            }
-        });
-
     }
 
     @Override
@@ -96,7 +88,7 @@ public class BusyWidgetProvider extends AppWidgetProvider {
     @Override
     public void onDeleted(Context context, int[] appWidgetIds) {
         for (int appWidgetId : appWidgetIds) {
-            references.delete(appWidgetId);
+            BusyWidgetConfigureActivity.getReferences().delete(appWidgetId);
             BusyWidgetConfigureActivity.deleteRoomId(context, appWidgetId);
         }
     }
@@ -104,34 +96,39 @@ public class BusyWidgetProvider extends AppWidgetProvider {
     @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
-        if (ACTION_CLICK.equals(intent.getAction())) {
+        if (intent.getAction().equals(ACTION_CLICK)) {
             int widgetId = intent.getIntExtra(
                     AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
-            references.get(widgetId).addListenerForSingleValueEvent(
-                new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        dataSnapshot.getRef().setValue(!dataSnapshot.getValue(Boolean.class));
-                    }
-                    @Override
-                    public void onCancelled(DatabaseError databaseError) {
-                        Log.w(TAG, "Updating room cancelled!", databaseError.toException());
-                    }
-                });
+            DatabaseReference ref = BusyWidgetConfigureActivity.getReferences().get(widgetId);
+            if (ref != null) {
+                ref.addListenerForSingleValueEvent(
+                        new ValueEventListener() {
+                            @Override
+                            public void onDataChange(DataSnapshot dataSnapshot) {
+                                dataSnapshot.getRef().setValue(!dataSnapshot.getValue(Boolean.class));
+                            }
+
+                            @Override
+                            public void onCancelled(DatabaseError databaseError) {
+                                Log.w(TAG, "Updating room cancelled!", databaseError.toException());
+                            }
+                        });
+            }
+            else
+                Log.e(TAG, "Error getting the related room");
         }
 
     }
 
     public BusyWidgetProvider() {
         super();
-        references = new SparseArray<>();
     }
 
     protected static PendingIntent getPendingSelfIntent(Context context, String action, Integer widgetId) {
         Intent intent = new Intent(context, BusyWidgetProvider.class);
         intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
         intent.setAction(action);
-        return PendingIntent.getBroadcast(context, 0, intent, 0);
+        return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
 }
