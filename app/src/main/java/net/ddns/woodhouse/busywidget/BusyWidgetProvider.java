@@ -12,60 +12,66 @@ import android.widget.RemoteViews;
  * App Widget Configuration implemented in {@link BusyWidgetConfigureActivity BusyWidgetConfigureActivity}
  */
 public class BusyWidgetProvider extends AppWidgetProvider {
+    private static final String ACTION_CLICK = "net.ddns.woodhouse.busywidget.APPWIDGET_CLICK";
 
-    static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
-                                int appWidgetId) {
-
-        CharSequence widgetText = BusyWidgetConfigureActivity.loadTitlePref(context, appWidgetId);
-
-        // Construct the RemoteViews object
+    protected static void updateWidget(Context context, AppWidgetManager manager, int widgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.busy_widget);
-        views.setTextViewText(R.id.appwidget_text, widgetText);
 
-        // Set the appropriate value for the state
-        BusyModel.getInstance().setBusy(!BusyModel.getInstance().isBusy());
-        views.setImageViewResource(R.id.buttonIsBusy, (BusyModel.getInstance().isBusy()) ?
-                R.drawable.button_blank_red_01 : R.drawable.button_blank_green_01);
+        String roomId = SettingWidget.load(context, widgetId);
+        if (roomId != null) {
+            views.setTextViewText(R.id.appwidget_text, roomId);
+            views.setOnClickPendingIntent(R.id.buttonIsBusy, getPendingSelfIntent(
+                    context, ACTION_CLICK, widgetId));
 
-        // Instruct the widget manager to update the widget
-        appWidgetManager.updateAppWidget(appWidgetId, views);
+            BusyWidgetConfigureActivity.getRoom().registerWidget(widgetId, roomId, (
+                    new ValueEventListenerWithContext(context) {
+                        @Override
+                        public void onValueChange(String roomId, int widgetId, Boolean value) {
+                            AppWidgetManager manager = AppWidgetManager.getInstance(context);
+                            RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.busy_widget);
+                            views.setImageViewResource(R.id.buttonIsBusy, value ?
+                                    R.drawable.button_blank_red_01 : R.drawable.button_blank_green_01);
+                            views.setOnClickPendingIntent(R.id.buttonIsBusy, getPendingSelfIntent(
+                                    context, ACTION_CLICK, widgetId));
+                            manager.updateAppWidget(widgetId, views);
+                        }
+                    }));
+
+            manager.updateAppWidget(widgetId, views);
+        }
+
     }
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-        // There may be multiple widgets active, so update all of them
         for (int appWidgetId : appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId);
-
-            // Set the click listener to simply update
-            RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.busy_widget);
-            Intent intent = new Intent(context, BusyWidgetProvider.class);
-            intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds);
-            PendingIntent pendingIntent = PendingIntent.getBroadcast(context,
-                    0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-            views.setOnClickPendingIntent(R.id.buttonIsBusy, pendingIntent);
-
-            appWidgetManager.updateAppWidget(appWidgetId, views);
+            updateWidget(context, appWidgetManager, appWidgetId);
         }
     }
 
     @Override
     public void onDeleted(Context context, int[] appWidgetIds) {
-        // When the user deletes the widget, delete the preference associated with it.
         for (int appWidgetId : appWidgetIds) {
-            BusyWidgetConfigureActivity.deleteTitlePref(context, appWidgetId);
+            BusyWidgetConfigureActivity.getRoom().unregisterWidget(appWidgetId);
+            SettingWidget.delete(context, appWidgetId);
         }
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
+        if (intent.getAction().equals(ACTION_CLICK)) {
+            int widgetId = intent.getIntExtra(
+                    AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
+            BusyWidgetConfigureActivity.getRoom().toggleWidget(widgetId);
+        }
+    }
 
-//        if (UPDATE_INTENT.equals(intent.getAction())) {
-//            BusyModel.getInstance().setBusy(!BusyModel.getInstance().isBusy());
-//        }
-
+    protected static PendingIntent getPendingSelfIntent(Context context, String action, Integer widgetId) {
+        Intent intent = new Intent(context, BusyWidgetProvider.class);
+        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        intent.setAction(action);
+        return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
 }

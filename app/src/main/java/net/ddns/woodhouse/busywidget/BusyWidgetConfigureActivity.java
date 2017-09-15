@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
@@ -14,21 +13,21 @@ import android.widget.EditText;
  */
 public class BusyWidgetConfigureActivity extends Activity {
 
-    private static final String PREFS_NAME = "net.ddns.woodhouse.busywidget.BusyWidgetProvider";
-    private static final String PREF_PREFIX_KEY = "appwidget_";
+    private static RoomStorage room = new RoomStorage();
     int mAppWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
     EditText mAppWidgetText;
+
     View.OnClickListener mOnClickListener = new View.OnClickListener() {
         public void onClick(View v) {
             final Context context = BusyWidgetConfigureActivity.this;
 
             // When the button is clicked, store the string locally
-            String widgetText = mAppWidgetText.getText().toString();
-            saveTitlePref(context, mAppWidgetId, widgetText);
+            String roomId = mAppWidgetText.getText().toString();
+            SettingWidget.save(context, mAppWidgetId, roomId);
 
             // It is the responsibility of the configuration activity to update the app widget
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-            BusyWidgetProvider.updateAppWidget(context, appWidgetManager, mAppWidgetId);
+            BusyWidgetProvider.updateWidget(context, appWidgetManager, mAppWidgetId);
 
             // Make sure we pass back the original appWidgetId
             Intent resultValue = new Intent();
@@ -38,33 +37,8 @@ public class BusyWidgetConfigureActivity extends Activity {
         }
     };
 
-    public BusyWidgetConfigureActivity() {
-        super();
-    }
-
-    // Write the prefix to the SharedPreferences object for this widget
-    static void saveTitlePref(Context context, int appWidgetId, String text) {
-        SharedPreferences.Editor prefs = context.getSharedPreferences(PREFS_NAME, 0).edit();
-        prefs.putString(PREF_PREFIX_KEY + appWidgetId, text);
-        prefs.apply();
-    }
-
-    // Read the prefix from the SharedPreferences object for this widget.
-    // If there is no preference saved, get the default from a resource
-    static String loadTitlePref(Context context, int appWidgetId) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, 0);
-        String titleValue = prefs.getString(PREF_PREFIX_KEY + appWidgetId, null);
-        if (titleValue != null) {
-            return titleValue;
-        } else {
-            return context.getString(R.string.appwidget_text);
-        }
-    }
-
-    static void deleteTitlePref(Context context, int appWidgetId) {
-        SharedPreferences.Editor prefs = context.getSharedPreferences(PREFS_NAME, 0).edit();
-        prefs.remove(PREF_PREFIX_KEY + appWidgetId);
-        prefs.apply();
+    static RoomStorage getRoom() {
+        return room;
     }
 
     @Override
@@ -93,7 +67,10 @@ public class BusyWidgetConfigureActivity extends Activity {
             return;
         }
 
-        mAppWidgetText.setText(loadTitlePref(BusyWidgetConfigureActivity.this, mAppWidgetId));
+        String roomId = SettingWidget.load(BusyWidgetConfigureActivity.this, mAppWidgetId);
+        if (roomId != null)
+            mAppWidgetText.setText(roomId);
+        //TODO set a generic text for a new widget (UUID??)
     }
 }
 
