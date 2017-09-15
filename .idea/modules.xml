@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/BusyWidget.iml" filepath="$PROJECT_DIR$/BusyWidget.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android-busywidget.iml" filepath="$PROJECT_DIR$/android-busywidget.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>
